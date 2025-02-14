@@ -16,7 +16,7 @@ const client = new CozeAPI({
 // 简单对话示例
 export async function quickChat() {
   const v = await client.chat.createAndPoll({
-    bot_id: "7470457444561911818",
+    bot_id: "7470835601315987482",
     additional_messages: [
       {
         role: RoleType.User,
@@ -29,12 +29,16 @@ export async function quickChat() {
   let logs: string[] = [];
 
   if (v.chat.status === ChatStatus.COMPLETED) {
-    for (const item of v.messages) {
-      console.log("[%s]:[%s]:%s", item.role, item.type, item.content);
-      logs.push(`[${item.role}]:[${item.type}]:${item.content}`);
+    if (v.messages) {
+      for (const item of v.messages) {
+        // console.log("[%s]:[%s]:%s", item.role, item.type, item.content);
+        // logs.push(`[${item.role}]:[${item.type}]:${item.content}`);
+        console.log("%s", item.content);
+        logs.push(`${item.content}`);
+      }
     }
-    console.log("usage", v.chat.usage);
-    logs.push("usage: " + v.chat.usage);
+    //console.log("usage", v.chat.usage);
+    // logs.push("usage: " + v.chat.usage);
   }
   console.log("services下的connect_coze返回了logs");
   return logs;

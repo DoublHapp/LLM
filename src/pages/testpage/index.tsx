@@ -11,6 +11,8 @@ import Taro from "@tarojs/taro";
 import "./index.scss";
 
 type PageStateProps = {
+  children?;
+  ReactNode;
   store: {
     counterStore: {
       counter: number;
