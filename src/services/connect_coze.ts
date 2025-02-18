@@ -1,5 +1,11 @@
 //导入coze
-import { CozeAPI, COZE_CN_BASE_URL, ChatStatus, RoleType } from "@coze/api";
+import {
+  CozeAPI,
+  ChatEventType,
+  COZE_CN_BASE_URL,
+  ChatStatus,
+  RoleType,
+} from "@coze/api";
 
 // 使用个人访问令牌初始化客户端
 const client = new CozeAPI({
@@ -13,7 +19,7 @@ const client = new CozeAPI({
   baseURL: COZE_CN_BASE_URL,
 });
 
-// 简单对话示例
+//简单对话示例
 export async function quickChat() {
   const v = await client.chat.createAndPoll({
     bot_id: "7470835601315987482",
@@ -42,4 +48,26 @@ export async function quickChat() {
   }
   console.log("services下的connect_coze返回了logs");
   return logs;
+}
+
+export async function streamChat(updateLogs: (log: string) => void) {
+  const stream = await client.chat.stream({
+    bot_id: "7470835601315987482",
+    additional_messages: [
+      {
+        role: RoleType.User,
+        content: "Hello!请介绍一下你的同伴摩尔加纳。",
+        content_type: "text",
+      },
+    ],
+  });
+
+  for await (const part of stream) {
+    if (part.event === ChatEventType.CONVERSATION_MESSAGE_DELTA) {
+      //process.stdout.write(part.data.content); // 实时响应
+      console.log(part.data.content); // 实时响应
+      updateLogs(part.data.content); // 逐步更新logs数组
+    }
+  }
+  console.log("services下的connect_coze成功流式返回了streamlogs");
 }

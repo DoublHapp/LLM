@@ -24,8 +24,10 @@ type PageStateProps = {
     testStore: {
       username: string;
       logs: string[];
+      streamLogs: string[];
       setUsername: Function;
       setLogs: Function;
+      setStreamLogs: Function;
     };
   };
 };
@@ -41,8 +43,8 @@ class Index extends Component<PropsWithChildren> {
     let {
       store: { testStore },
     } = this.props;
-    let logs = testStore.logs;
-    testStore.setLogs();
+    //testStore.setLogs();
+    testStore.setStreamLogs();
   }
 
   componentWillUnmount() {}
@@ -76,11 +78,12 @@ class Index extends Component<PropsWithChildren> {
         >
           点击修改用户名
         </Button>
-
         <Button onClick={goFirstPage}>点击跳转首页方法1</Button>
         <Navigator url="/pages/index/index">点击跳转首页方法2</Navigator>
         <View className="square"></View>
-        <View>coze回复:{testStore.logs}</View>
+        {/* <View>coze回复:{testStore.logs}</View> */}
+        <View>coze流式回复:{testStore.streamLogs.join(" ")}</View>{" "}
+        {/* 显示流式回答的结果 */}
       </View>
     );
   }
