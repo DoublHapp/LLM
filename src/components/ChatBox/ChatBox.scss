@@ -109,7 +109,8 @@
   }
 
   .input-area {
-    position: absolute; // 改为绝对定位
+    position: absolute; // 改为固定窗口定位
+    background-color: white;
     bottom: 0;
     left: 0;
     right: 0;
@@ -133,9 +134,9 @@
     .exit-btn {
       flex: 0.5; // 减小按钮所占空间
       min-width: 60px; // 设置最小宽度确保按钮文字正常显示
-      margin-left: 8px;
       padding: 0 8px; // 减小内边距
       font-size: 14px; // 可以适当减小字体大小
+      margin: auto;
     }
 
     .inline-btn.active {

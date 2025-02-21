@@ -75,9 +75,9 @@ class Index extends Component<PropsWithChildren> {
           <Button onClick={goFirstPage}>点击跳转首页方法1</Button>
           <Navigator url="/pages/index/index">点击跳转首页方法2</Navigator>
           <View className="square"></View>
-          <View>
-            <ChatBox></ChatBox>
-          </View>
+        </View>
+        <View>
+          <ChatBox></ChatBox>
         </View>
       </View>
     );

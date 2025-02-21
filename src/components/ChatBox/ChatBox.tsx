@@ -52,6 +52,9 @@ const ChatBox: React.FC = () => {
       },
     ]);
 
+    //先清空输入框
+    setInputText("");
+
     // 调用 StreamChatWithBox
     await StreamChatWithBox(
       inputText,
@@ -68,7 +71,6 @@ const ChatBox: React.FC = () => {
       }
     );
 
-    setInputText("");
   };
 
   return (
@@ -107,6 +109,7 @@ const ChatBox: React.FC = () => {
           onFocus={() => {
             if (isInline) setIsInlineMode(true);
           }}
+          onConfirm={()=>handleSend()}
           placeholder="请输入消息..."
         />
         <Button className="send-btn" onClick={handleSend}>
