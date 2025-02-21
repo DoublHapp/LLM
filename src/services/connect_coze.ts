@@ -69,5 +69,30 @@ export async function streamChat(updateLogs: (log: string) => void) {
       updateLogs(part.data.content); // 逐步更新logs数组
     }
   }
+
   console.log("services下的connect_coze成功流式返回了streamlogs");
+}
+
+//对话框组件流式回复
+export async function StreamChatWithBox(
+  userInput: string,
+  updateLogs: (log: string, isNewLine: boolean) => void
+) {
+  const stream = await client.chat.stream({
+    bot_id: "7470835601315987482",
+    additional_messages: [
+      {
+        role: RoleType.User,
+        content: userInput,
+        content_type: "text",
+      },
+    ],
+  });
+
+  for await (const part of stream) {
+    if (part.event === ChatEventType.CONVERSATION_MESSAGE_DELTA) {
+      // 只传递新增的内容，而不是完整响应
+      updateLogs(part.data.content, false);
+    }
+  }
 }

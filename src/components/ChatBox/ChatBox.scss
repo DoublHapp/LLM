@@ -1,0 +1,145 @@
+.chat-box {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  max-height: 80vh; // 添加最大高度限
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative; // 添加相对定位
+  overflow: hidden; // 防止内容溢出
+
+  // 内联模式样式
+  &.inline-mode {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 60%;
+    min-width: 300px;
+    min-height: 400px;
+    max-height: 80vh; // 确保不会超出视窗
+    z-index: 1000;
+  }
+
+  .messages-area {
+    position: absolute; // 改为绝对定位
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 80px; // 为输入区域预留空间
+    padding: 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    // 添加自定义滚动条样式
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 3px;
+    }
+
+    .message {
+      flex-shrink: 0;
+      margin: 8px 0;
+      padding: 8px 12px;
+      border-radius: 4px;
+      max-width: 80%;
+      min-height: fit-content;
+      word-break: break-word;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+
+      Text {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      &.user {
+        align-self: flex-end;
+        background: #e3f2fd;
+      }
+
+      &.bot {
+        align-self: flex-start;
+        background: #f5f5f5;
+      }
+
+      .code-block {
+        width: 100%;
+        height: auto;
+        position: relative;
+        background: #2b2b2b;
+        color: #fff;
+        padding: 16px;
+        border-radius: 4px;
+        font-family: monospace;
+
+        .copy-btn {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          padding: 4px 8px;
+          font-size: 12px;
+        }
+      }
+
+      // 添加用于滚动的元素样式
+      .messages-end {
+        float: left;
+        clear: both;
+        height: 1px;
+      }
+    }
+  }
+
+  .input-area {
+    position: absolute; // 改为绝对定位
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px; // 设置固定高度
+    display: flex;
+    padding: 16px;
+    border-top: 1px solid #eee;
+    align-items: center;
+    z-index: 1; // 确保在消息区域上方
+
+    .message-input {
+      flex: 4;
+      margin-right: 8px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .send-btn,
+    .inline-btn,
+    .exit-btn {
+      flex: 0.5; // 减小按钮所占空间
+      min-width: 60px; // 设置最小宽度确保按钮文字正常显示
+      margin-left: 8px;
+      padding: 0 8px; // 减小内边距
+      font-size: 14px; // 可以适当减小字体大小
+    }
+
+    .inline-btn.active {
+      background: #e3f2fd;
+    }
+  }
+}
