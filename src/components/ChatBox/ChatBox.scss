@@ -10,6 +10,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   position: relative; // 添加相对定位
   overflow: hidden; // 防止内容溢出
+  box-shadow: grey 0 0 14px 0px;
 
   // 内联模式样式
   &.inline-mode {
@@ -26,11 +27,8 @@
   }
 
   .messages-area {
-    position: absolute; // 改为绝对定位
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 80px; // 为输入区域预留空间
+    position: relative; // 改为绝对定位
+    flex-grow: 1;
     padding: 16px;
     overflow-y: auto;
     overflow-x: hidden;
@@ -109,38 +107,61 @@
   }
 
   .input-area {
-    position: absolute; // 改为固定窗口定位
-    background-color: white;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 80px; // 设置固定高度
+    position: relative; // 改为固定窗口定位
+    background-color: rgb(243 244 246);
     display: flex;
-    padding: 16px;
-    border-top: 1px solid #eee;
+    flex-direction: column;
+    padding: 0.1rem 0.5rem;
+    border-radius: 20px;
     align-items: center;
     z-index: 1; // 确保在消息区域上方
 
     .message-input {
-      flex: 4;
+      width: 100%;
       margin-right: 8px;
       padding: 8px;
       border: 1px solid #ddd;
       border-radius: 4px;
+      height: auto;
+      max-height: 350px;
+      resize: none;
+      font-size: 0.6rem;
+      background-color: rgb(243 244 246);
+      overflow-y: auto;
     }
 
-    .send-btn,
-    .inline-btn,
-    .exit-btn {
-      flex: 0.5; // 减小按钮所占空间
-      min-width: 60px; // 设置最小宽度确保按钮文字正常显示
-      padding: 0 8px; // 减小内边距
-      font-size: 14px; // 可以适当减小字体大小
-      margin: auto;
+    .button-area {
+      display: flex;
+      justify-content: start;
+      width: 100%;
+      padding: 0.2rem 0;
+
+      .send-btn,
+      .upload-btn,
+      .inline-btn,
+      .exit-btn {
+        min-width: 60px; // 设置最小宽度确保按钮文字正常显示
+        width: auto;
+        font-size: 14px; // 可以适当减小字体大小
+        // background-color: white;
+        border-radius: 20px;
+        margin: 0 10px;
+      }
+      .placeholder {
+        flex-grow: 1;
+      }
     }
+
 
     .inline-btn.active {
       background: #e3f2fd;
     }
   }
+}
+
+.taro-textarea {
+  // 我让你别可编辑了你是不是二多龙？
+  resize: none;
+  font-size: 0.6rem;
+  background-color: rgb(243 244 246);
 }

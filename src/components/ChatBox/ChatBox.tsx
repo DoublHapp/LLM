@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { View, Input, Button, Text, Image } from "@tarojs/components";
+import { View, Input, Button, Text, Image, Textarea } from "@tarojs/components";
 import {
   StreamChatWithBox,
   clearChatHistory,
@@ -110,7 +110,7 @@ const ChatBox: React.FC = () => {
       </View>
 
       <View className="input-area">
-        <Input
+        {/* <Input
           className="message-input"
           value={inputText}
           onInput={(e) => setInputText(e.detail.value)}
@@ -119,23 +119,44 @@ const ChatBox: React.FC = () => {
           }}
           onConfirm={() => handleSend()}
           placeholder="请输入消息..."
+        /> */}
+        <Textarea
+          className="message-input"
+          value={inputText}
+          onInput={(e) => setInputText(e.detail.value)}
+          onFocus={() => {
+            if (isInline) setIsInlineMode(true);
+          }}
+          onConfirm={() => handleSend()}
+          placeholder="请输入消息..."
+          maxlength={10000}
         />
-        <Button className="send-btn" onClick={handleSend}>
-          发送
-        </Button>
-        {/* 此处可以添加一个清除上下文联系历史记录的按钮 */}
-        {!isInlineMode ? (
+        <View className="button-area">
+          {/* 此处可以添加一个清除上下文联系历史记录的按钮 */}
+          {!isInlineMode ? (
+            <Button
+              className={`inline-btn ${isInline ? "active" : ""}`}
+              onClick={() => setIsInline(!isInline)}
+            >
+              内联
+            </Button>
+          ) : (
+            <Button className="exit-btn" onClick={() => setIsInlineMode(false)}>
+              退出
+            </Button>
+          )}
           <Button
-            className={`inline-btn ${isInline ? "active" : ""}`}
-            onClick={() => setIsInline(!isInline)}
-          >
-            内联
+            className="upload-btn"
+            >
+            上传
           </Button>
-        ) : (
-          <Button className="exit-btn" onClick={() => setIsInlineMode(false)}>
-            退出
+          <View
+            className="placeholder"
+          />
+          <Button className="send-btn" onClick={handleSend}>
+            发送
           </Button>
-        )}
+        </View>
       </View>
     </View>
   );

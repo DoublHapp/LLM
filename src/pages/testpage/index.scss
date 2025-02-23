@@ -1,8 +1,9 @@
-.index {
-  .square {
-    width: 375px;
-    height: 375px;
-    background-color: green;
-    margin: 20px 0;
-  }
+.container{
+    margin-top: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: auto;
+    height: 100%;
+    padding: 0 1.5rem;
 }

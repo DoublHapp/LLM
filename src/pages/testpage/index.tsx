@@ -54,29 +54,10 @@ class Index extends Component<PropsWithChildren> {
     let username = testStore.username;
     const msg = "Hello Taro";
 
-    const goFirstPage = () => {
-      Taro.navigateTo({
-        url: "/pages/index/index",
-      });
-    };
-
     return (
       <View className="index">
-        <View className="content-area">
-          <Text>username:{username}</Text>
-          <Text>{msg}</Text>
-          <Button
-            onClick={() => {
-              testStore.setUsername("王文博");
-            }}
-          >
-            点击修改用户名
-          </Button>
-          <Button onClick={goFirstPage}>点击跳转首页方法1</Button>
-          <Navigator url="/pages/index/index">点击跳转首页方法2</Navigator>
-          <View className="square"></View>
-        </View>
-        <View>
+        <View className="content-area"></View>
+        <View className="container">
           <ChatBox></ChatBox>
         </View>
       </View>
