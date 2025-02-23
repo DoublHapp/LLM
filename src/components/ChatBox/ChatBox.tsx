@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { View, Input, Button, Text, Image } from "@tarojs/components";
-import { StreamChatWithBox } from "../../services/connect_coze";
+import {
+  StreamChatWithBox,
+  clearChatHistory,
+} from "../../services/connect_coze";
 import "./ChatBox.scss";
 
 interface Message {
@@ -70,7 +73,12 @@ const ChatBox: React.FC = () => {
         });
       }
     );
+  };
 
+  // 添加清除历史记录方法
+  const handleClearHistory = () => {
+    setMessages([]);
+    clearChatHistory();
   };
 
   return (
@@ -109,12 +117,13 @@ const ChatBox: React.FC = () => {
           onFocus={() => {
             if (isInline) setIsInlineMode(true);
           }}
-          onConfirm={()=>handleSend()}
+          onConfirm={() => handleSend()}
           placeholder="请输入消息..."
         />
         <Button className="send-btn" onClick={handleSend}>
           发送
         </Button>
+        {/* 此处可以添加一个清除上下文联系历史记录的按钮 */}
         {!isInlineMode ? (
           <Button
             className={`inline-btn ${isInline ? "active" : ""}`}

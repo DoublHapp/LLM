@@ -3,9 +3,74 @@ import {
   CozeAPI,
   ChatEventType,
   COZE_CN_BASE_URL,
-  ChatStatus,
   RoleType,
+  ChatStatus,
+  ContentType,
 } from "@coze/api";
+
+interface Message {
+  role: RoleType;
+  content: string;
+  content_type: ContentType;
+}
+
+//创建会话管理类
+class ChatSession {
+  private messages: Message[] = [];
+  private readonly maxHistory: number = 20;
+
+  constructor(
+    private readonly client: CozeAPI,
+    private readonly botId: string
+  ) {}
+
+  public async sendMessage(
+    userInput: string,
+    updateCallback: (content: string, isNewLine: boolean) => void
+  ) {
+    //添加用户消息到历史记录
+    this.addMessage({
+      role: RoleType.User,
+      content: userInput,
+      content_type: "text",
+    });
+
+    // 创建流式对话，包含完整历史
+    const stream = await this.client.chat.stream({
+      bot_id: this.botId,
+      user_id: `user_${Date.now()}`, // 可以根据需要设置用户ID
+      additional_messages: this.messages,
+    });
+
+    let botResponse = "";
+
+    for await (const part of stream) {
+      if (part.event === ChatEventType.CONVERSATION_MESSAGE_DELTA) {
+        botResponse += part.data.content;
+        updateCallback(part.data.content, false);
+      }
+    }
+
+    // 添加机器人回复到历史记录
+    this.addMessage({
+      role: RoleType.Assistant,
+      content: botResponse,
+      content_type: "text",
+    });
+  }
+
+  private addMessage(message: Message) {
+    this.messages.push(message);
+    // 保持历史记录在限定长度内
+    if (this.messages.length > this.maxHistory) {
+      this.messages = this.messages.slice(-this.maxHistory);
+    }
+  }
+
+  public clearHistory() {
+    this.messages = [];
+  }
+}
 
 // 使用个人访问令牌初始化客户端
 const client = new CozeAPI({
@@ -18,6 +83,22 @@ const client = new CozeAPI({
   allowPersonalAccessTokenInBrowser: true,
   baseURL: COZE_CN_BASE_URL,
 });
+
+//创建会话实例
+const chatSession = new ChatSession(client, "7470835601315987482");
+
+//对话框组件流式回复
+export async function StreamChatWithBox(
+  userInput: string,
+  updateLogs: (log: string, isNewLine: boolean) => void
+) {
+  await chatSession.sendMessage(userInput, updateLogs);
+}
+
+// 添加清除历史记录功能
+export function clearChatHistory() {
+  chatSession.clearHistory();
+}
 
 //简单对话示例
 export async function quickChat() {
@@ -71,28 +152,4 @@ export async function streamChat(updateLogs: (log: string) => void) {
   }
 
   console.log("services下的connect_coze成功流式返回了streamlogs");
-}
-
-//对话框组件流式回复
-export async function StreamChatWithBox(
-  userInput: string,
-  updateLogs: (log: string, isNewLine: boolean) => void
-) {
-  const stream = await client.chat.stream({
-    bot_id: "7470835601315987482",
-    additional_messages: [
-      {
-        role: RoleType.User,
-        content: userInput,
-        content_type: "text",
-      },
-    ],
-  });
-
-  for await (const part of stream) {
-    if (part.event === ChatEventType.CONVERSATION_MESSAGE_DELTA) {
-      // 只传递新增的内容，而不是完整响应
-      updateLogs(part.data.content, false);
-    }
-  }
 }
