@@ -80,22 +80,66 @@
 
       .code-block {
         width: 100%;
-        height: auto;
-        position: relative;
-        background: #2b2b2b;
-        color: #fff;
-        padding: 16px;
-        border-radius: 4px;
-        font-family: monospace;
+        margin: 8px 0;
+        background: #1e1e1e;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    
+        .code-header {
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 16px;
+          background: #2d2d2d;
+          border-bottom: 1px solid #3d3d3d;
+    
+          .language {
+            color: #9cdcfe;
+            font-size: 12px;
+            font-family: 'Consolas', monospace;
+          }
+    
+          .copy-btn {
+            font-size: 12px;
+            padding: 4px 8px;
+            min-width: 60px;
+            background: #3d3d3d;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
 
-        .copy-btn {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          padding: 4px 8px;
-          font-size: 12px;
+            &:hover {
+              background: #4d4d4d;
+            }
+
+            &:active {
+              background: #5d5d5d;
+            }
+          }
         }
-      }
+    
+        .code-content {
+          width: 100%;
+          padding: 16px;
+          background: #1e1e1e;
+          overflow-x: auto;
+          
+          .code-text {
+            display: block;
+            width: 100%;
+            color: #d4d4d4;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre;
+            tab-size: 4;
+          }
+        }
+    }
 
       // 添加用于滚动的元素样式
       .messages-end {
