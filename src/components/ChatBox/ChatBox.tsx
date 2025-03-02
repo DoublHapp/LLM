@@ -12,13 +12,15 @@ interface Message {
   type: "text" | "markdown" | "image" | "code" | "file" | "workflow";
   content: string;
   isUser: boolean;
-  language?: string; // 添加语言属性
   fileName?: string;
   fileId?: string;
   workflowResult?: string;
 }
 
-// 添加代码检测函数
+/**
+ * 代码检测函数
+ * @deprecated
+ */
 const detectAndFormatCode = (content: string): { type: "text" | "code", content: string, language?: string } => {
   // 支持多个代码块的正则表达式
   const codeBlockRegex = /```([^\n]*)\n([\s\S]*?)```/g;
@@ -26,6 +28,7 @@ const detectAndFormatCode = (content: string): { type: "text" | "code", content:
 
   if (matches) {
     // 提取第一个代码块的语言和代码内容
+    //warning: 此处为贪婪匹配，可能导致匹配多个代码块
     const languageMatch = content.match(/```([^\n]*)\n/);
     const language = languageMatch ? languageMatch[1].trim() : 'plaintext';
 
@@ -124,8 +127,8 @@ const ChatBox: React.FC = () => {
             isUser: false
           }]);
 
-          const id= await tryUploadFile(formData);
-          if(id) console.log('文件上传成功',id);
+          const id = await tryUploadFile(formData);
+          if (id) console.log('文件上传成功', id);
           else console.error('文件上传失败');
         } catch (error) {
           console.error('工作流执行失败:', error);
@@ -157,16 +160,24 @@ const ChatBox: React.FC = () => {
 
   // 处理代码复制
   const handleCopyCode = (code: string) => {
-    Taro.setClipboardData({
-      data: code,
-      success: () => {
-        Taro.showToast({
-          title: "代码已复制",
-          icon: "success",
-          duration: 2000
-        });
-      }
-    });
+    if(Taro.setClipboardData){
+      Taro.setClipboardData({
+        data: code,
+        success: function (res) {
+          Taro.getClipboardData({
+            success: function (res) {
+              console.log(res.data) // data
+            }
+          })
+        }
+      });
+    }else{
+      navigator.clipboard.writeText(code).then(() => {
+        console.log('复制成功');
+      }).catch((err) => {
+        console.error('复制失败', err);
+      });
+    }
   };
 
   // 处理发送消息
@@ -197,7 +208,7 @@ const ChatBox: React.FC = () => {
     setInputText("");
 
     // 调用 StreamChatWithBox
-    await StreamChatWithBox(inputText, (content: string, isNewLine: boolean) => {
+    await StreamChatWithBox(inputText, (content: string) => {
       setMessages((prev) => {
         const newMessages = [...prev];
         const lastMessage = newMessages[newMessages.length - 1];
@@ -207,16 +218,9 @@ const ChatBox: React.FC = () => {
           // 检查是否包含完整的代码块
           if (newContent.includes("```") && newContent.split("```").length % 2 === 1) {
             // 如果有完整的代码块
-            const formattedContent = detectAndFormatCode(newContent);
-            lastMessage.type = formattedContent.type;
-            lastMessage.content = formattedContent.content;
-            if (formattedContent.type === "code") {
-              lastMessage.language = formattedContent.language;
-            }
-          } else {
-            // 如果没有完整的代码块，保持文本格式
-            lastMessage.content = newContent;
+            lastMessage.type = 'code';
           }
+          lastMessage.content = newContent;
         }
         return newMessages;
       });
@@ -224,22 +228,72 @@ const ChatBox: React.FC = () => {
   };
 
   // 渲染代码块
-  const renderCodeBlock = (content: string, language?: string) => (
-    <View className="code-block">
-      <View className="code-header">
-        <Text className="language">{language || 'plaintext'}</Text>
-        <Button
-          className="copy-btn"
-          onClick={() => handleCopyCode(content)}
+  const renderCodeBlock = (content: string) => {
+    const blocks = [...(content.matchAll(/```([^\n]*)\n[\s\S]*?```/g))];
+    const result: Array<{ content: string, type: 'text' | 'code', language?: string }> = [];
+    let lastIndex = 0;
+
+    for (const match of blocks) {
+      const matchText = match[0];
+      const matchIndex = match.index;
+
+      // 添加匹配前的子字符串
+      if (matchIndex > lastIndex) {
+        result.push({
+          content: content.slice(lastIndex, matchIndex),
+          type: 'text'
+        });
+      }
+
+      // 添加匹配结果
+      result.push({
+        //移除开头和结尾的 ``` 符号
+        content: matchText.replace(/```[^\n]*\n/, '').replace(/```$/, '').trim(),
+        type: 'code',
+        language: match[1]
+      });
+
+      // 更新索引
+      lastIndex = matchIndex + matchText.length;
+    }
+
+    // 添加最后一段子字符串
+    if (lastIndex < content.length) {
+      result.push({
+        content: content.slice(lastIndex),
+        type: 'text'
+      });
+    }
+    return result.map((block, index) => {
+      if (block.type === 'text') {
+        return <Text
+          key={index}
+          userSelect>
+          {block.content}
+        </Text>
+      } else if (block.type === 'code') {
+        return <View
+          key={index}
+          className="code-block"
         >
-          Copy
-        </Button>
-      </View>
-      <View className="code-content">
-        <Text className="code-text">{content}</Text>
-      </View>
-    </View>
-  );
+          <View className="code-header">
+            <Text className="language">{block.language || 'plaintext'}</Text>
+            <Button
+              className="copy-btn"
+              onClick={() => handleCopyCode(block.content)}
+            >
+              Copy
+            </Button>
+          </View>
+          <View className="code-content">
+            <Text className="code-text" userSelect>{block.content}</Text>
+          </View>
+        </View>
+      }else{
+        throw(new Error('未知的代码块类型'));
+      }
+    });
+  }
 
   return (
     <View className={`chat-box ${isInlineMode ? "inline-mode" : ""}`}>
@@ -249,8 +303,8 @@ const ChatBox: React.FC = () => {
             key={index}
             className={`message ${msg.isUser ? "user" : "bot"}`}
           >
-            {msg.type === "text" && <Text>{msg.content}</Text>}
-            {msg.type === "code" && renderCodeBlock(msg.content, msg.language)}
+            {msg.type === "text" && <Text userSelect>{msg.content}</Text>}
+            {msg.type === "code" && renderCodeBlock(msg.content)}
             {msg.type === "file" && renderFileMessage(msg)}
           </View>
         ))}
@@ -263,9 +317,9 @@ const ChatBox: React.FC = () => {
           className="message-input"
           value={inputText}
           onInput={(e) => {
-            if(isConfirm.current){
-              isConfirm.current=false;
-            }else{
+            if (isConfirm.current) {
+              isConfirm.current = false;
+            } else {
               setInputText(e.detail.value);
             }
           }}

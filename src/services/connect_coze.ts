@@ -26,7 +26,7 @@ class ChatSession {
 
   public async sendMessage(
     userInput: string,
-    updateCallback: (content: string, isNewLine: boolean) => void
+    updateCallback: (content: string) => void
   ) {
     let messages: any[] = [{
       type: 'text',
@@ -64,12 +64,16 @@ class ChatSession {
     // 发送请求
     console.log('本次带上的文件：',this.files);
     const stream = this.client.chat.stream(request);
+    console.log(request);
+    // const stream = (()=>{
+    //   this.client
+    // })();
 
     let botResponse = "";
     for await (const part of stream) {
       if (part.event === ChatEventType.CONVERSATION_MESSAGE_DELTA) {
         botResponse += part.data.content;
-        updateCallback(part.data.content, false);
+        updateCallback(part.data.content);
       }else if(part.event==ChatEventType.CONVERSATION_CHAT_FAILED){
         console.error('请求执行出错',request);
       }
@@ -99,10 +103,11 @@ class ChatSession {
     this.files.push(fileId);
   }
 }
-
+// token配置
+const token='pat_iiMmI2VszBGqUO5FzRdLX7WYOFjOOmZdY9MtdZDT5htaiNzAt60wvkPF5QnnuMTr';
 // 使用个人访问令牌初始化客户端
 const client = new CozeAPI({
-  token: "pat_iiMmI2VszBGqUO5FzRdLX7WYOFjOOmZdY9MtdZDT5htaiNzAt60wvkPF5QnnuMTr", // 从 https://www.coze.cn/open/oauth/pats 获取你的 PAT
+  token: token, // 从 https://www.coze.cn/open/oauth/pats 获取你的 PAT
   // 或者
   // token: async () => {
   //   // 如果令牌过期则刷新
@@ -113,12 +118,13 @@ const client = new CozeAPI({
 });
 
 //创建会话实例
-const chatSession = new ChatSession(client, "7477128512009945103");
+const BotId='7477199714741141554';
+const chatSession = new ChatSession(client, BotId);
 
 //对话框组件流式回复
 export async function StreamChatWithBox(
   userInput: string,
-  updateLogs: (log: string, isNewLine: boolean) => void
+  updateLogs: (log: string) => void
 ) {
   await chatSession.sendMessage(userInput, updateLogs);
 }
@@ -134,7 +140,7 @@ export async function tryUploadFile(formData: FormData) {
     {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer pat_iiMmI2VszBGqUO5FzRdLX7WYOFjOOmZdY9MtdZDT5htaiNzAt60wvkPF5QnnuMTr`,
+        'Authorization': `Bearer ${token}`,
       },
       body: formData
     }
