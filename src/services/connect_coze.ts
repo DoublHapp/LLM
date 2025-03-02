@@ -28,34 +28,66 @@ class ChatSession {
     userInput: string,
     updateCallback: (content: string, isNewLine: boolean) => void
   ) {
-    //添加用户消息到历史记录
+    let messages: any[];
+    try {
+      // 解析用户输入为消息数组
+      messages = JSON.parse(userInput);
+      if (!Array.isArray(messages)) {
+        messages = [{
+          type: "text",
+          text: userInput
+        }];
+      }
+    } catch {
+      // 如果解析失败，作为普通文本处理
+      messages = [{
+        type: "text",
+        text: userInput
+      }];
+    }
+  
+    // 提取文本消息和文件信息
+    const textMessage = messages.find(msg => msg.type === "text");
+    const fileMessage = messages.find(msg => msg.type === "file");
+  
+    // 添加用户消息到历史记录
     this.addMessage({
       role: RoleType.User,
-      content: userInput,
-      content_type: "text",
+      content: textMessage?.text || "",
+      content_type: "text"
     });
-
-    // 创建流式对话，包含完整历史
-    const stream = await this.client.chat.stream({
+  
+    // 创建流式对话请求
+    const request: any = {
       bot_id: this.botId,
-      user_id: `user_${Date.now()}`, // 可以根据需要设置用户ID
-      additional_messages: this.messages,
-    });
-
+      user_id: `user_${Date.now()}`,
+      additional_messages: this.messages
+    };
+  
+    // 如果有文件信息，添加到请求中
+    if (fileMessage?.file_id) {
+      request.files = [{
+        id: fileMessage.file_id
+      }];
+    }
+  
+    // 发送请求
+    const stream = await this.client.chat.stream(request);
+  
     let botResponse = "";
-
+  
     for await (const part of stream) {
       if (part.event === ChatEventType.CONVERSATION_MESSAGE_DELTA) {
         botResponse += part.data.content;
         updateCallback(part.data.content, false);
       }
     }
-
+  
     // 添加机器人回复到历史记录
     this.addMessage({
       role: RoleType.Assistant,
       content: botResponse,
-      content_type: "text",
+      content_type: "text"
     });
   }
 
