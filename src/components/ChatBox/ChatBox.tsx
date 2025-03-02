@@ -1,19 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import Taro from "@tarojs/taro";
-import { View, Input, Button, Text, Image, Textarea } from "@tarojs/components";
+import { View, Button, Text, Textarea } from "@tarojs/components";
 import {
   StreamChatWithBox,
-  clearChatHistory,
+  tryUploadFile,
 } from "../../services/connect_coze";
 import "./ChatBox.scss";
 
-import { CozeAPI } from '@coze/api';
 
 interface Message {
-  type: "text" | "markdown" | "image" | "code"|"file"|"workflow";
+  type: "text" | "markdown" | "image" | "code" | "file" | "workflow";
   content: string;
   isUser: boolean;
-  language?:string; // 添加语言属性
+  language?: string; // 添加语言属性
   fileName?: string;
   fileId?: string;
   workflowResult?: string;
@@ -24,25 +23,25 @@ const detectAndFormatCode = (content: string): { type: "text" | "code", content:
   // 支持多个代码块的正则表达式
   const codeBlockRegex = /```([^\n]*)\n([\s\S]*?)```/g;
   const matches = content.match(codeBlockRegex);
-  
+
   if (matches) {
     // 提取第一个代码块的语言和代码内容
     const languageMatch = content.match(/```([^\n]*)\n/);
     const language = languageMatch ? languageMatch[1].trim() : 'plaintext';
-    
+
     // 提取代码内容
     const codeContent = content
       .replace(/```[^\n]*\n/, '') // 移除开头的 ```language
       .replace(/```$/, '')        // 移除结尾的 ```
       .trim();
-    
+
     return {
       type: "code",
       content: codeContent,
       language: language
     };
   }
-  
+
   return {
     type: "text",
     content
@@ -54,6 +53,7 @@ const ChatBox: React.FC = () => {
   const [inputText, setInputText] = useState("");
   const [isInline, setIsInline] = useState(true);
   const [isInlineMode, setIsInlineMode] = useState(false);
+  const isConfirm = useRef(false);
 
   // 添加消息区域的引用
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -69,29 +69,29 @@ const ChatBox: React.FC = () => {
   }, [messages]);
 
 
-    // 添加工作流处理函数
-    const handleFileRead = async () => {
-  try {
-    // 创建文件选择器
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '*/*';
-    input.style.display = 'none';
-    document.body.appendChild(input);
+  // 文件上传函数
+  const handleFileRead = async () => {
+    try {
+      // 创建文件选择器
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '*/*';
+      input.style.display = 'none';
+      document.body.appendChild(input);
 
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
 
-      // 检查文件大小
-      if (file.size > 512 * 1024 * 1024) {
-        alert('文件不能超过512MB');
-        return;
-      }
+        // 检查文件大小
+        if (file.size > 512 * 1024 * 1024) {
+          alert('文件不能超过512MB');
+          return;
+        }
 
-      // 显示加载提示
-      const loadingEl = document.createElement('div');
-      loadingEl.style.cssText = `
+        // 显示加载提示
+        const loadingEl = document.createElement('div');
+        loadingEl.style.cssText = `
         position: fixed;
         top: 50%;
         left: 50%;
@@ -102,218 +102,55 @@ const ChatBox: React.FC = () => {
         border-radius: 4px;
         z-index: 9999;
       `;
-      loadingEl.textContent = '正在分析文件...';
-      document.body.appendChild(loadingEl);
+        loadingEl.textContent = '正在分析文件...';
+        document.body.appendChild(loadingEl);
 
-      try {
-        // 创建 FormData
-        const formData = new FormData();
-        formData.append('file', file);
+        try {
+          // 创建 FormData
+          const formData = new FormData();
+          formData.append('file', file);
 
-        // 使用 coze SDK 执行工作流
-        const apiClient = new CozeAPI({
-          token: 'pat_tN6yrQoqhhdRPPpaTqAewZ4uNOUtJce8RNvkZhpG7RKJnnO5o0G5er4ucGpzTGhF',
-          baseURL: 'https://api.coze.cn',
-          allowPersonalAccessTokenInBrowser: true // 允许在浏览器中使用 PAT
-        });
+          // 创建新的消息用于显示分析结果
+          setMessages(prev => [...prev, {
+            type: 'file',
+            content: `上传文件：${file.name}`,
+            isUser: true,
+            fileName: file.name
+          }]);
 
-        // 创建新的消息用于显示分析结果
-        setMessages(prev => [...prev, {
-          type: 'file',
-          content: `上传文件：${file.name}`,
-          isUser: true,
-          fileName: file.name
-        }]);
+          setMessages(prev => [...prev, {
+            type: 'text',
+            content: '',
+            isUser: false
+          }]);
 
-        setMessages(prev => [...prev, {
-          type: 'text',
-          content: '',
-          isUser: false
-        }]);
-
-        // 执行工作流（流式响应）
-        const stream = await apiClient.workflows.runs.stream({
-          workflow_id: '7476871338880811058',
-          parameters: {
-            input: formData // 直接传递 FormData
-          }
-        });
-
-        // 处理流式响应
-        for await (const chunk of stream) {
-          if (chunk.event === 'Message' && 'content' in chunk.data) {
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMessage = newMessages[newMessages.length - 1];
-              if (!lastMessage.isUser) {
-                lastMessage.content += chunk.data.content;
-              }
-              return newMessages;
-            });
-          }
+          const id= await tryUploadFile(formData);
+          if(id) console.log('文件上传成功',id);
+          else console.error('文件上传失败');
+        } catch (error) {
+          console.error('工作流执行失败:', error);
+          alert('文件分析失败');
+        } finally {
+          loadingEl.remove();
         }
+      };
 
-      } catch (error) {
-        console.error('工作流执行失败:', error);
-        alert('文件分析失败');
-      } finally {
-        loadingEl.remove();
-      }
-    };
+      input.click();
+      document.body.removeChild(input);
+    } catch (error) {
+      console.error('文件处理失败:', error);
+      alert('文件处理失败');
+    }
+  };
 
-    input.click();
-    document.body.removeChild(input);
-  } catch (error) {
-    console.error('文件处理失败:', error);
-    alert('文件处理失败');
-  }
-};
-
-
-    // // 处理文件上传
-    // const handleUpload = () => {
-    //   if (process.env.TARO_ENV === 'h5') {
-    //     // H5 环境使用 input type="file"
-    //     const input = document.createElement('input');
-    //     input.type = 'file';
-    //     input.accept = '*/*'; // 接受所有文件类型
-    //     input.style.display = 'none';
-        
-    //     input.onchange = async (e) => {
-    //       const file = (e.target as HTMLInputElement).files?.[0];
-    //       if (!file) return;
-    
-    //       // 检查文件大小
-    //       if (file.size > 512 * 1024 * 1024) { // 512MB 限制
-    //         alert('文件不能超过512MB');
-    //         return;
-    //       }
-    
-    //       // 添加加载中提示
-    //       const loadingEl = document.createElement('div');
-    //       loadingEl.style.cssText = `
-    //         position: fixed;
-    //         top: 50%;
-    //         left: 50%;
-    //         transform: translate(-50%, -50%);
-    //         background: rgba(0, 0, 0, 0.7);
-    //         color: white;
-    //         padding: 10px 20px;
-    //         border-radius: 4px;
-    //         z-index: 9999;
-    //       `;
-    //       loadingEl.textContent = '正在上传...';
-    //       document.body.appendChild(loadingEl);
-    
-    //       try {
-    //         // 创建 FormData
-    //         const formData = new FormData();
-    //         formData.append('file', file);
-    
-    //         // 使用 fetch 上传文件
-    //         const response = await fetch('https://api.coze.cn/v1/files/upload', {
-    //           method: 'POST',
-    //           headers: {
-    //             'Authorization': 'Bearer pat_tN6yrQoqhhdRPPpaTqAewZ4uNOUtJce8RNvkZhpG7RKJnnO5o0G5er4ucGpzTGhF'
-    //           },
-    //           body: formData
-    //         });
-    
-    //         const result = await response.json();
-    
-    //         if (response.status === 200 && result.code === 0) {
-    //           const fileId = result.data.id;
-    //           const fileName = result.data.file_name;
-    
-    //           // 添加文件消息
-    //           setMessages(prev => [...prev, {
-    //             type: 'file',
-    //             content: `上传文件：${fileName}`,
-    //             isUser: true,
-    //             fileName: fileName,
-    //             fileId: fileId
-    //           }]);
-    
-    //           // 创建机器人消息占位
-    //           setMessages(prev => [...prev, {
-    //             type: 'text',
-    //             content: '',
-    //             isUser: false
-    //           }]);
-    
-    //           // 向 coze 发送带有文件信息的消息
-    //           await StreamChatWithBox(
-    //             JSON.stringify([
-    //               {
-    //                 type: "text",
-    //                 text: "请分析这个文件"
-    //               },
-    //               {
-    //                 type: "file",
-    //                 file_id: fileId  // 直接使用 file_id，不需要额外的字段
-    //               }
-    //             ]),
-    //             (content: string, isNewLine: boolean) => {
-    //               setMessages(prev => {
-    //                 const newMessages = [...prev];
-    //                 const lastMessage = newMessages[newMessages.length - 1];
-    //                 if (!lastMessage.isUser) {
-    //                   lastMessage.content += content;
-    //                 }
-    //                 return newMessages;
-    //               });
-    //             }
-    //           );
-    
-    //           // 显示成功提示
-    //           const successEl = document.createElement('div');
-    //           successEl.style.cssText = `
-    //             position: fixed;
-    //             top: 50%;
-    //             left: 50%;
-    //             transform: translate(-50%, -50%);
-    //             background: rgba(0, 0, 0, 0.7);
-    //             color: white;
-    //             padding: 10px 20px;
-    //             border-radius: 4px;
-    //             z-index: 9999;
-    //           `;
-    //           successEl.textContent = '上传成功';
-    //           document.body.appendChild(successEl);
-    //           setTimeout(() => successEl.remove(), 2000);
-    //         }
-    //       } catch (error) {
-    //         console.error('上传失败:', error);
-    //         alert('上传失败');
-    //       } finally {
-    //         // 移除加载提示
-    //         loadingEl.remove();
-    //       }
-    //     };
-    
-    //     document.body.appendChild(input);
-    //     input.click();
-    //     document.body.removeChild(input);
-    //   } else {
-    //     // 小程序环境使用 Taro API
-    //     Taro.chooseMessageFile({
-    //       count: 1,
-    //       type: 'all',
-    //       success: async (res) => {
-    //         // ... 小程序上传逻辑
-    //       }
-    //     });
-    //   }
-    // };
-
-     // 渲染文件消息
+  // 渲染文件消息
   const renderFileMessage = (msg: Message) => {
     return (
       <View className="file-message">
         <View className="file-icon">📎</View>
         <Text className="file-name">{msg.fileName}</Text>
         <Text className="file-id">ID: {msg.fileId}</Text>
-        
+
       </View>
     );
   };
@@ -386,30 +223,23 @@ const ChatBox: React.FC = () => {
     });
   };
 
-  // 添加清除历史记录方法
-  const handleClearHistory = () => {
-    setMessages([]);
-    clearChatHistory();
-  };
-
-
-// 渲染代码块
-const renderCodeBlock = (content: string, language?: string) => (
-  <View className="code-block">
-    <View className="code-header">
-      <Text className="language">{language || 'plaintext'}</Text>
-      <Button 
-        className="copy-btn"
-        onClick={() => handleCopyCode(content)}
-      >
-        Copy
-      </Button>
+  // 渲染代码块
+  const renderCodeBlock = (content: string, language?: string) => (
+    <View className="code-block">
+      <View className="code-header">
+        <Text className="language">{language || 'plaintext'}</Text>
+        <Button
+          className="copy-btn"
+          onClick={() => handleCopyCode(content)}
+        >
+          Copy
+        </Button>
+      </View>
+      <View className="code-content">
+        <Text className="code-text">{content}</Text>
+      </View>
     </View>
-    <View className="code-content">
-      <Text className="code-text">{content}</Text>
-    </View>
-  </View>
-);
+  );
 
   return (
     <View className={`chat-box ${isInlineMode ? "inline-mode" : ""}`}>
@@ -420,7 +250,7 @@ const renderCodeBlock = (content: string, language?: string) => (
             className={`message ${msg.isUser ? "user" : "bot"}`}
           >
             {msg.type === "text" && <Text>{msg.content}</Text>}
-            {msg.type === "code" && renderCodeBlock(msg.content,msg.language)}
+            {msg.type === "code" && renderCodeBlock(msg.content, msg.language)}
             {msg.type === "file" && renderFileMessage(msg)}
           </View>
         ))}
@@ -429,24 +259,23 @@ const renderCodeBlock = (content: string, language?: string) => (
       </View>
 
       <View className="input-area">
-        {/* <Input
-          className="message-input"
-          value={inputText}
-          onInput={(e) => setInputText(e.detail.value)}
-          onFocus={() => {
-            if (isInline) setIsInlineMode(true);
-          }}
-          onConfirm={() => handleSend()}
-          placeholder="请输入消息..."
-        /> */}
         <Textarea
           className="message-input"
           value={inputText}
-          onInput={(e) => setInputText(e.detail.value)}
+          onInput={(e) => {
+            if(isConfirm.current){
+              isConfirm.current=false;
+            }else{
+              setInputText(e.detail.value);
+            }
+          }}
           onFocus={() => {
             if (isInline) setIsInlineMode(true);
           }}
-          onConfirm={() => handleSend()}
+          onConfirm={() => {
+            handleSend()
+            isConfirm.current = true;
+          }}
           placeholder="请输入消息..."
           maxlength={10000}
         />
@@ -467,7 +296,7 @@ const renderCodeBlock = (content: string, language?: string) => (
           <Button
             className="upload-btn"
             onClick={handleFileRead}
-            >
+          >
             上传
           </Button>
           <View

@@ -21,8 +21,6 @@ type PageStateProps = {
       logs: string[];
       streamLogs: string[];
       setUsername: Function;
-      setLogs: Function;
-      setStreamLogs: Function;
     };
   };
 };
@@ -38,7 +36,6 @@ class Index extends Component<PropsWithChildren> {
     let {
       store: { testStore },
     } = this.props;
-    testStore.setStreamLogs();
   }
 
   componentWillUnmount() {}
