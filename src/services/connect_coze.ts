@@ -18,6 +18,7 @@ class ChatSession {
   private messages: Message[] = [];
   private readonly maxHistory: number = 20;
   private files: string[] = [];
+  private speculattions: string[] = [];
 
   constructor(
     private readonly client: CozeAPI,
@@ -26,7 +27,7 @@ class ChatSession {
 
   public async sendMessage(
     userInput: string,
-    updateCallback: (content: string) => void
+    updateCallback: (content: string, end?: boolean) => void
   ) {
     let messages: any[] = [{
       type: 'text',
@@ -62,20 +63,46 @@ class ChatSession {
     };
 
     // 发送请求
-    console.log('本次带上的文件：',this.files);
+    console.log('本次带上的文件：', this.files);
     const stream = this.client.chat.stream(request);
     console.log(request);
-    // const stream = (()=>{
-    //   this.client
-    // })();
 
     let botResponse = "";
+    let stopped = false, speculating = false;
     for await (const part of stream) {
-      if (part.event === ChatEventType.CONVERSATION_MESSAGE_DELTA) {
-        botResponse += part.data.content;
-        updateCallback(part.data.content);
-      }else if(part.event==ChatEventType.CONVERSATION_CHAT_FAILED){
-        console.error('请求执行出错',request);
+      if (stopped) break;
+      switch (part.event) {
+        case ChatEventType.CONVERSATION_MESSAGE_DELTA:
+          botResponse += part.data.content;
+          updateCallback(part.data.content);
+          break;
+        case ChatEventType.CONVERSATION_CHAT_FAILED:
+          console.error('请求执行出错', request);
+          break;
+        case ChatEventType.CONVERSATION_MESSAGE_COMPLETED:
+          /**
+           * 已知part.data.type如下：
+           * text: 所有文本消息的总结
+           * verbose: 疑似为消息发送结束的参数
+           * follow_up: 消息结束后对下一个提问的猜测，可用于联想
+           */
+          if(part.data.type==='follow_up'){
+            //开始联想，清空之前的联想提问
+            if(!speculating){
+              this.speculattions.length=0;
+              speculating=true;
+              updateCallback('猜你想问：');
+            }
+            console.log('猜你想问：', part.data.content);
+            this.speculattions.push(part.data.content);
+            //联想放哪没想好
+            updateCallback(part.data.content+'\n');
+          }
+          break;
+        case ChatEventType.DONE:
+          updateCallback('', true);
+          stopped = true;
+          break;
       }
     }
 
@@ -104,7 +131,7 @@ class ChatSession {
   }
 }
 // token配置
-const token='pat_iiMmI2VszBGqUO5FzRdLX7WYOFjOOmZdY9MtdZDT5htaiNzAt60wvkPF5QnnuMTr';
+const token = 'pat_iiMmI2VszBGqUO5FzRdLX7WYOFjOOmZdY9MtdZDT5htaiNzAt60wvkPF5QnnuMTr';
 // 使用个人访问令牌初始化客户端
 const client = new CozeAPI({
   token: token, // 从 https://www.coze.cn/open/oauth/pats 获取你的 PAT
@@ -118,13 +145,13 @@ const client = new CozeAPI({
 });
 
 //创建会话实例
-const BotId='7477199714741141554';
+const BotId = '7477199714741141554';
 const chatSession = new ChatSession(client, BotId);
 
 //对话框组件流式回复
 export async function StreamChatWithBox(
   userInput: string,
-  updateLogs: (log: string) => void
+  updateLogs: (log: string, end?: boolean) => void
 ) {
   await chatSession.sendMessage(userInput, updateLogs);
 }

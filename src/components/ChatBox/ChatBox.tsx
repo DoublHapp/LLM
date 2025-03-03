@@ -15,6 +15,7 @@ interface Message {
   fileName?: string;
   fileId?: string;
   workflowResult?: string;
+  end?: boolean;
 }
 
 /**
@@ -128,7 +129,16 @@ const ChatBox: React.FC = () => {
           }]);
 
           const id = await tryUploadFile(formData);
-          if (id) console.log('文件上传成功', id);
+          if (id) {
+            console.log('文件上传成功', id);
+            setMessages(prev => {
+              const newMessages = [...prev];
+              const lastMessage = newMessages[newMessages.length - 1];
+              lastMessage.end = true;
+              lastMessage.content = `文件上传成功，ID: ${id}`;
+              return newMessages;
+            });
+          }
           else console.error('文件上传失败');
         } catch (error) {
           console.error('工作流执行失败:', error);
@@ -160,7 +170,7 @@ const ChatBox: React.FC = () => {
 
   // 处理代码复制
   const handleCopyCode = (code: string) => {
-    if(Taro.setClipboardData){
+    if (Taro.setClipboardData) {
       Taro.setClipboardData({
         data: code,
         success: function (res) {
@@ -171,7 +181,7 @@ const ChatBox: React.FC = () => {
           })
         }
       });
-    }else{
+    } else {
       navigator.clipboard.writeText(code).then(() => {
         console.log('复制成功');
       }).catch((err) => {
@@ -181,15 +191,19 @@ const ChatBox: React.FC = () => {
   };
 
   // 处理发送消息
-  const handleSend = async () => {
-    if (!inputText.trim()) return;
-
+  const handleSend = async (content?: string) => {
+    if (!content) content = inputText;
+    if (!content.trim()) return;
+    if (!(messages[messages.length - 1]?.end ?? true)) {
+      alert('请等待上一条消息处理完成');
+      return;
+    }
     // 添加用户消息
     setMessages((prev) => [
       ...prev,
       {
         type: "text",
-        content: inputText,
+        content: content,
         isUser: true,
       },
     ]);
@@ -208,10 +222,16 @@ const ChatBox: React.FC = () => {
     setInputText("");
 
     // 调用 StreamChatWithBox
-    await StreamChatWithBox(inputText, (content: string) => {
+    await StreamChatWithBox(content, (content: string, end: boolean = false) => {
       setMessages((prev) => {
         const newMessages = [...prev];
         const lastMessage = newMessages[newMessages.length - 1];
+        //若已停止，则不更新消息
+        if (lastMessage.end) return newMessages;
+        if (end) {
+          lastMessage.end = end;
+          return newMessages;
+        }
         if (!lastMessage.isUser) {
           // 累积内容
           const newContent = lastMessage.content + content;
@@ -289,25 +309,66 @@ const ChatBox: React.FC = () => {
             <Text className="code-text" userSelect>{block.content}</Text>
           </View>
         </View>
-      }else{
-        throw(new Error('未知的代码块类型'));
+      } else {
+        throw (new Error('未知的代码块类型'));
       }
     });
+  }
+
+  //渲染一段消息
+  const renderMessage = (msg: Message, index: number) => {
+    return (
+      <View
+        key={index}
+        className={`message ${msg.isUser ? "user" : "bot"}`}
+      >
+        <View className="message-content">
+          {msg.type === "text" && <Text userSelect>{msg.content}</Text>}
+          {msg.type === "code" && renderCodeBlock(msg.content)}
+          {msg.type === "file" && renderFileMessage(msg)}
+        </View>
+
+        <View className="message-btns">
+          {/* 加载中的提示 */}
+          {!msg.end && !msg.isUser && <View
+            className="loading"
+            onClick={() => {
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                lastMessage.end = true;
+                return newMessages;
+              });
+            }}
+          >×</View>}
+
+          {/* 重发按钮 */}
+          {msg.isUser && <View
+            className="rebuild"
+            onClick={() => {
+              handleSend(msg.content);
+            }}
+          >←</View>}
+
+          {/* 删除消息按钮 */}
+          {(msg.end || msg.isUser) && <View
+            className="delete"
+            onClick={() => {
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                newMessages.splice(index, 1);
+                return newMessages;
+              });
+            }}>×</View>}
+        </View>
+      </View>
+    )
   }
 
   return (
     <View className={`chat-box ${isInlineMode ? "inline-mode" : ""}`}>
       <View className="messages-area">
-        {messages.map((msg, index) => (
-          <View
-            key={index}
-            className={`message ${msg.isUser ? "user" : "bot"}`}
-          >
-            {msg.type === "text" && <Text userSelect>{msg.content}</Text>}
-            {msg.type === "code" && renderCodeBlock(msg.content)}
-            {msg.type === "file" && renderFileMessage(msg)}
-          </View>
-        ))}
+        {messages.map(renderMessage)}
         {/* 添加用于滚动的空div */}
         <View ref={messagesEndRef} className="messages-end" />
       </View>
@@ -325,6 +386,8 @@ const ChatBox: React.FC = () => {
           }}
           onFocus={() => {
             if (isInline) setIsInlineMode(true);
+            //联想输入
+
           }}
           onConfirm={() => {
             handleSend()
@@ -356,7 +419,7 @@ const ChatBox: React.FC = () => {
           <View
             className="placeholder"
           />
-          <Button className="send-btn" onClick={handleSend}>
+          <Button className="send-btn" onClick={() => handleSend()}>
             发送
           </Button>
         </View>
