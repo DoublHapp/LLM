@@ -1,22 +1,20 @@
-.chat-box {
-  --bg: #fff;
+.chat-box-inline {
   display: flex;
   flex-direction: column;
   align-self: center;
   width: 80%;
-  height: 100%;
-  // min-height: 300px;
   max-height: 80vh; // 添加最大高度限
-  background: #f3f5fa;
+  background: #fff;
   border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   position: relative; // 添加相对定位
   overflow: hidden; // 防止内容溢出
+  box-shadow: grey 0 0 14px 0px;
 
   .messages-area {
-    background-color: transparent;
-    position: relative; // 改为绝对定位
-    height: 50vh;
+    position: relative;
     flex-grow: 1;
+    // padding: 16px 0;
     overflow-y: auto;
     overflow-x: hidden;
     display: flex;
@@ -257,34 +255,39 @@
     }
   }
 
+  &.inline-mode>.messages-area {
+    height: 0;
+  }
+
   .input-area {
     position: relative;
-    background-color: var(--bg);
+    background-color: rgb(243 244 246);
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     padding: 0.1rem 0.5rem;
     border-radius: 20px;
     align-items: center;
     z-index: 1; // 确保在消息区域上方
 
     .message-input {
+      flex-grow: 1;
       width: 100%;
       margin-right: 8px;
-      padding: 8px;
+      // padding: 8px;
+      border: 1px solid #ddd;
       border-radius: 4px;
-      height: auto;
       max-height: 350px;
       resize: none;
+      height: 0.8rem;
+      line-height: 0.8rem;
       font-size: 0.6rem;
-      background-color: var(--bg);
-      overflow-y: auto;
+      background-color: rgb(243 244 246);
     }
 
     .button-area {
       display: flex;
       justify-content: start;
-      width: 100%;
-      padding: 0.2rem 0;
+      padding: 0.1rem 0;
 
       .send-btn,
       .upload-btn,
@@ -312,10 +315,6 @@
           display: none;
         }
       }
-
-      .placeholder {
-        flex-grow: 1;
-      }
     }
 
 
@@ -329,7 +328,7 @@
   // 我让你别可编辑了你是不是二多龙？
   resize: none;
   font-size: 0.6rem;
-  background-color: var(--bg);
+  background-color: rgb(243 244 246);
 }
 
 .file-message {

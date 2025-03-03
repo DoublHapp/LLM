@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import Taro from "@tarojs/taro";
-import { View, Button, Text, Textarea } from "@tarojs/components";
+import { View, Button, Text, Textarea, Input } from "@tarojs/components";
 import {
   StreamChatWithBox,
   tryUploadFile,
 } from "../../services/connect_coze";
-import "./ChatBox.scss";
+import "./ChatBoxInline.scss";
 
 
 interface Message {
@@ -18,10 +18,10 @@ interface Message {
   end?: boolean;
 }
 
-
-const ChatBox: React.FC = () => {
+const ChatBoxInline: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
+  const [isInline, setIsInline] = useState(true);
   const isConfirm = useRef(false);
 
   // 添加消息区域的引用
@@ -337,7 +337,7 @@ const ChatBox: React.FC = () => {
   }
 
   return (
-    <View className={`chat-box`}>
+    <View className={`chat-box-inline ${isInline ? "inline-mode" : ""}`}>
       <View className="messages-area">
         {messages.map(renderMessage)}
         {/* 添加用于滚动的空div */}
@@ -345,7 +345,7 @@ const ChatBox: React.FC = () => {
       </View>
 
       <View className="input-area">
-        <Textarea
+        <Input
           className="message-input"
           value={inputText}
           onInput={(e) => {
@@ -354,6 +354,12 @@ const ChatBox: React.FC = () => {
             } else {
               setInputText(e.detail.value);
             }
+          }}
+          onFocus={() => {
+            setIsInline(false);
+          }}
+          onBlur={() => {
+            setIsInline(true);
           }}
           onConfirm={() => {
             handleSend()
@@ -369,9 +375,6 @@ const ChatBox: React.FC = () => {
           >
             上传
           </Button>
-          <View
-            className="placeholder"
-          />
           <Button className="send-btn" onClick={() => handleSend()}>
             发送
           </Button>
@@ -381,4 +384,4 @@ const ChatBox: React.FC = () => {
   );
 };
 
-export default ChatBox;
+export default ChatBoxInline;

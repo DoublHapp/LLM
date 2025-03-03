@@ -91,7 +91,7 @@ class ChatSession {
             if(!speculating){
               this.speculattions.length=0;
               speculating=true;
-              updateCallback('猜你想问：');
+              updateCallback('\n猜你想问：\n');
             }
             console.log('猜你想问：', part.data.content);
             this.speculattions.push(part.data.content);

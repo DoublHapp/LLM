@@ -1,8 +1,10 @@
 import { Component, PropsWithChildren } from "react";
-import { View, Button, Text } from "@tarojs/components";
+import { View } from "@tarojs/components";
 import { observer, inject } from "mobx-react";
-
+import styles from "./index.module.scss";
 import "./index.scss";
+
+import ChatBox from "../../components/ChatBox/ChatBox";
 
 type PageStateProps = {
   children?;
@@ -24,7 +26,8 @@ interface Index {
 @inject("store")
 @observer
 class Index extends Component<PropsWithChildren> {
-  componentDidMount() {}
+  componentDidMount() {
+  }
 
   componentWillUnmount() {}
 
@@ -32,31 +35,17 @@ class Index extends Component<PropsWithChildren> {
 
   componentDidHide() {}
 
-  increment = () => {
-    const { counterStore } = this.props.store;
-    counterStore.increment();
-  };
-
-  decrement = () => {
-    const { counterStore } = this.props.store;
-    counterStore.decrement();
-  };
-
-  incrementAsync = () => {
-    const { counterStore } = this.props.store;
-    counterStore.incrementAsync();
-  };
-
   render() {
-    const {
-      counterStore: { counter },
-    } = this.props.store;
+
     return (
       <View className="index">
-        <Button onClick={this.increment}>+</Button>
-        <Button onClick={this.decrement}>-</Button>
-        <Button onClick={this.incrementAsync}>Add Async</Button>
-        <Text>{counter}</Text>
+        <View className="content-area"></View>
+        <View className={styles.container}>
+          <View className={styles.logo}>
+            AI助手
+          </View>
+          <ChatBox></ChatBox>
+        </View>
       </View>
     );
   }

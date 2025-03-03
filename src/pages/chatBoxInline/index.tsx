@@ -1,10 +1,9 @@
 import { Component, PropsWithChildren } from "react";
-import { View, Button, Text, Navigator } from "@tarojs/components";
+import { View } from "@tarojs/components";
 import { observer, inject } from "mobx-react";
-import Taro from "@tarojs/taro";
-import "./index.scss";
+import styles from "./index.module.scss";
 
-import ChatBox from "../../components/ChatBox/ChatBox";
+import ChatBoxInline from "../../components/ChatBoxInline/ChatBoxInline";
 
 type PageStateProps = {
   children?;
@@ -15,12 +14,6 @@ type PageStateProps = {
       increment: Function;
       decrement: Function;
       incrementAsync: Function;
-    };
-    testStore: {
-      username: string;
-      logs: string[];
-      streamLogs: string[];
-      setUsername: Function;
     };
   };
 };
@@ -33,9 +26,6 @@ interface Index {
 @observer
 class Index extends Component<PropsWithChildren> {
   componentDidMount() {
-    let {
-      store: { testStore },
-    } = this.props;
   }
 
   componentWillUnmount() {}
@@ -45,17 +35,15 @@ class Index extends Component<PropsWithChildren> {
   componentDidHide() {}
 
   render() {
-    let {
-      store: { testStore },
-    } = this.props;
-    let username = testStore.username;
-    const msg = "Hello Taro";
 
     return (
       <View className="index">
         <View className="content-area"></View>
-        <View className="container">
-          <ChatBox></ChatBox>
+        <View className={styles.container}>
+          <View className={styles.logo}>
+            AI助手
+          </View>
+          <ChatBoxInline/>
         </View>
       </View>
     );

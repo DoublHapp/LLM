@@ -1,5 +1,5 @@
 export default defineAppConfig({
-  pages: ["pages/testpage/index", "pages/index/index"],
+  pages: ["pages/index/index","pages/chatBoxInline/index"],
   window: {
     backgroundTextStyle: "light",
     navigationBarBackgroundColor: "#fff",
@@ -12,14 +12,14 @@ export default defineAppConfig({
       {
         //iconPath: "",
         //selectedIconPath: "",
-        pagePath: "/pages/index/index",
-        text: "首页",
+        pagePath: "pages/index/index",
+        text: "内联对话框",
       },
       {
         //iconPath: "",
         //selectedIconPath: "",
-        pagePath: "/pages/testpage/index",
-        text: "测试页",
+        pagePath: "pages/chatBoxInline/index",
+        text: "独立对话框",
       },
     ],
   },
