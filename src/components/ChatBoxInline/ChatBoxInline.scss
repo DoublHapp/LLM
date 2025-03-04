@@ -43,7 +43,7 @@
       margin: 8px 0;
       padding: 8px 12px;
       border-radius: 4px;
-      max-width: 80%;
+      max-width: 100%;
       min-height: fit-content;
       word-break: break-word;
       white-space: pre-wrap;
@@ -98,6 +98,7 @@
 
       .message-content {
 
+        max-width: 100%;
         box-shadow: #c9c9c9 0 0 20px 0px;
         font-size: 0.5rem;
         line-height: 0.8rem;
@@ -151,10 +152,10 @@
           }
 
           .code-content {
-            width: 100%;
-            padding: 16px;
+            padding: 5%;
+            width: 90%;
             background: grey;
-            overflow-x: auto;
+            overflow-x: hidden;
 
             .code-text {
               display: block;
@@ -165,6 +166,7 @@
               line-height: 1.5;
               white-space: pre;
               tab-size: 4;
+              overflow: auto;
             }
           }
         }

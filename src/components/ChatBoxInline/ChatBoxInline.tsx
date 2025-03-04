@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Taro from "@tarojs/taro";
-import { View, Button, Text, Textarea, Input } from "@tarojs/components";
+import { View, Button, Text, Textarea, Input, ScrollView } from "@tarojs/components";
 import {
   StreamChatWithBox,
   tryUploadFile,
@@ -25,11 +25,14 @@ const ChatBoxInline: React.FC = () => {
   const isConfirm = useRef(false);
 
   // 添加消息区域的引用
+  const messagesAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 添加自动滚动函数
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (process.env.TARO_ENV === 'h5') {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   // 在消息更新时自动滚动
@@ -54,7 +57,7 @@ const ChatBoxInline: React.FC = () => {
 
         // 检查文件大小
         if (file.size > 512 * 1024 * 1024) {
-          alert('文件不能超过512MB');
+          console.error('文件不能超过512MB');
           return;
         }
 
@@ -107,7 +110,6 @@ const ChatBoxInline: React.FC = () => {
           else console.error('文件上传失败');
         } catch (error) {
           console.error('工作流执行失败:', error);
-          alert('文件分析失败');
         } finally {
           loadingEl.remove();
         }
@@ -117,7 +119,6 @@ const ChatBoxInline: React.FC = () => {
       document.body.removeChild(input);
     } catch (error) {
       console.error('文件处理失败:', error);
-      alert('文件处理失败');
     }
   };
 
@@ -160,7 +161,7 @@ const ChatBoxInline: React.FC = () => {
     if (!content) content = inputText;
     if (!content.trim()) return;
     if (messages.length !== 0 && messages[messages.length - 1]?.end !== true) {
-      alert('请等待上一条消息处理完成');
+      console.error('请等待上一条消息处理完成');
       return;
     }
     // 添加用户消息
@@ -285,6 +286,7 @@ const ChatBoxInline: React.FC = () => {
     return (
       <View
         key={index}
+        id={`message-${index}`}
         className={`message ${msg.isUser ? "user" : "bot"}`}
       >
         <View className={`message-headImage ${msg.isUser
@@ -337,12 +339,19 @@ const ChatBoxInline: React.FC = () => {
   }
 
   return (
-    <View className={`chat-box-inline ${isInline ? "inline-mode" : ""}`}>
-      <View className="messages-area">
+    <View
+      className={`chat-box-inline ${isInline ? "inline-mode" : ""}`}
+    >
+      <ScrollView
+        className="messages-area"
+        scrollY
+        scrollIntoView={`message-${messages.length-1}`}
+        ref={messagesAreaRef}
+      >
         {messages.map(renderMessage)}
         {/* 添加用于滚动的空div */}
-        <View ref={messagesEndRef} className="messages-end" />
-      </View>
+        <View ref={messagesEndRef} className="messages-end" id="messages=end" />
+      </ScrollView>
 
       <View className="input-area">
         <Input
@@ -357,9 +366,6 @@ const ChatBoxInline: React.FC = () => {
           }}
           onFocus={() => {
             setIsInline(false);
-          }}
-          onBlur={() => {
-            setIsInline(true);
           }}
           onConfirm={() => {
             handleSend()
