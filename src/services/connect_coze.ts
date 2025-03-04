@@ -100,7 +100,7 @@ class ChatSession {
     }
 
     // 创建流式对话请求
-    const request: any = {
+    const request = {
       bot_id: this.botId,
       user_id: `user_${Date.now()}`,
       additional_messages: this.messages,

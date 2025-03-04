@@ -6,6 +6,9 @@ import {
   tryUploadFile,
 } from "../../services/connect_coze";
 import "./ChatBoxInline.scss";
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css'
+
 
 
 interface Message {
@@ -24,6 +27,7 @@ const ChatBoxInline: React.FC = () => {
   const [isInline, setIsInline] = useState(true);
   const isConfirm = useRef(false);
 
+  const codeRefs = useRef<{ [key: number]: HTMLPreElement | null }>({});
   // 添加消息区域的引用
   const messagesAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -38,6 +42,13 @@ const ChatBoxInline: React.FC = () => {
   // 在消息更新时自动滚动
   useEffect(() => {
     scrollToBottom();
+  }, [messages]);
+  useEffect(() => {
+    Object.values(codeRefs.current).forEach(ref => {
+      if (ref) {
+        hljs.highlightElement(ref);
+      }
+    });
   }, [messages]);
 
 
@@ -272,7 +283,9 @@ const ChatBoxInline: React.FC = () => {
             </Button>
           </View>
           <View className="code-content">
-            <Text className="code-text" userSelect>{block.content}</Text>
+            <pre ref={el => codeRefs.current[index] = el} className="code-text">
+              <code className={`language-${block.language}`}>{block.content}</code>
+            </pre>
           </View>
         </View>
       } else {
@@ -345,7 +358,7 @@ const ChatBoxInline: React.FC = () => {
       <ScrollView
         className="messages-area"
         scrollY
-        scrollIntoView={`message-${messages.length-1}`}
+        scrollIntoView={`message-${messages.length - 1}`}
         ref={messagesAreaRef}
       >
         {messages.map(renderMessage)}
