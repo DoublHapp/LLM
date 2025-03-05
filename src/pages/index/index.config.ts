@@ -1,3 +1,3 @@
 export default definePageConfig({
-  navigationBarTitleText: '内联对话框'
+  navigationBarTitleText: '独立对话框'
 })

@@ -25,11 +25,40 @@ interface Message {
   markedHtml?: string;//存储markdown转化后的字符串
 }
 
+// 节流函数用于控制渲染频率
+function throttle<T extends (...args: any[]) => any>(fn: T, delay: number): (...args: Parameters<T>) => void {
+  let lastCall = 0;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Parameters<T>) => {
+    const now = Date.now();
+    const timeSinceLastCall = now - lastCall;
+
+    if (timeSinceLastCall >= delay) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      fn(...args);
+      lastCall = now;
+    } else if (!timeoutId) {
+      timeoutId = setTimeout(() => {
+        fn(...args);
+        timeoutId = null;
+        lastCall = Date.now();
+      }, delay - timeSinceLastCall);
+    }
+  };
+}
 
 const ChatBox: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const isConfirm = useRef(false);
+
+
+  // 新增一个标记当前正在处理的消息索引的 ref
+  const processingMsgIndexRef = useRef<number | null>(null);
 
   const codeRefs = useRef<{ [key: number]: HTMLPreElement | null }>({});
   // 添加消息区域的引用
@@ -53,6 +82,33 @@ const ChatBox: React.FC = () => {
       }
     });
   }, [messages]);
+
+
+  // 节流处理的 Markdown 转换函数
+  const throttledMarkdownProcess = useRef(
+    throttle(async (content: string, msgIndex: number) => {
+      try {
+        const html = await markdownToHtml(content);
+        setMessages(messages => {
+          const updatedMessages = [...messages];
+          if (updatedMessages[msgIndex]) {
+            updatedMessages[msgIndex].markedHtml = html;
+            updatedMessages[msgIndex].type = 'markdown';
+          }
+          return updatedMessages;
+        });
+      } catch (error) {
+        console.error('流式 Markdown 转换失败:', error);
+      }
+    }, 100) // 100ms 的节流延迟
+  ).current;
+
+  // 检查内容是否需要作为 Markdown 处理
+  const shouldProcessAsMarkdown = (content: string): boolean => {
+    return containsMarkdown(content);
+  };
+
+
 
 
   useEffect(() => {
@@ -136,78 +192,86 @@ const ChatBox: React.FC = () => {
   const markdownToHtml = async (content: string) => {
     console.log("开始解析Markdown");
     try {
-      // 创建 marked 实例
-      const marked = new Marked();
+      // 使用缓存的 Marked 实例，避免重复创建
+      if (!markdownToHtml.markedInstance) {
+        const marked = new Marked({
+          breaks: true,
+          gfm: true,
+          pedantic: false,
+          headerIds: true,
+          mangle: false,
+          silent: false
+        });
 
-      // 设置选项，包括自定义渲染方法
-      marked.setOptions({
-        breaks: true,
-        gfm: true,
-        pedantic: false,
-        headerIds: true,
-        mangle: false,
-        silent: false
-      });
+        // // 设置选项，包括自定义渲染方法
+        // marked.setOptions({
+        //   breaks: true,
+        //   gfm: true,
+        //   pedantic: false,
+        //   headerIds: true,
+        //   mangle: false,
+        //   silent: false
+        // });
 
-      // 自定义代码块渲染
-      marked.use({
-        renderer: {
-          code(codeObj, languageStr) {
-            // 在新版本的 marked 中，code 是一个对象而不是字符串
-            let code: string;
-            let language: string;
+        // 自定义代码块渲染
+        marked.use({
+          renderer: {
+            code(codeObj, languageStr) {
+              // 在新版本的 marked 中，code 是一个对象而不是字符串
+              let code: string;
+              let language: string;
 
-            if (typeof codeObj === 'object' && codeObj !== null) {
-              // 处理代码对象
-              code = codeObj.text || String(codeObj);
+              if (typeof codeObj === 'object' && codeObj !== null) {
+                // 处理代码对象
+                code = codeObj.text || String(codeObj);
 
-              // 从代码块信息中提取语言
-              if (codeObj.lang) {
-                language = codeObj.lang;
-              } else if (languageStr) {
-                language = languageStr;
-              } else {
-                // 尝试从代码内容判断语言
-                if (code.includes('def ') && code.includes(':')) {
-                  language = 'python';
-                } else if (code.includes('function') || code.includes('const ') || code.includes('let ') || code.includes('=>')) {
-                  language = 'javascript';
-                } else if (code.includes('<html') || code.includes('</div>')) {
-                  language = 'html';
-                } else if (code.includes('@media') || code.includes('{') && code.includes('}') && code.includes(':')) {
-                  language = 'css';
-                } else if (code.includes('#include') || code.includes('int main')) {
-                  language = 'c';
-                } else if (code.includes('import') && code.includes('from') && code.includes('class')) {
-                  language = 'java';
+                // 从代码块信息中提取语言
+                if (codeObj.lang) {
+                  language = codeObj.lang;
+                } else if (languageStr) {
+                  language = languageStr;
                 } else {
-                  language = 'plaintext';
+                  // 尝试从代码内容判断语言
+                  if (code.includes('def ') && code.includes(':')) {
+                    language = 'python';
+                  } else if (code.includes('function') || code.includes('const ') || code.includes('let ') || code.includes('=>')) {
+                    language = 'javascript';
+                  } else if (code.includes('<html') || code.includes('</div>')) {
+                    language = 'html';
+                  } else if (code.includes('@media') || code.includes('{') && code.includes('}') && code.includes(':')) {
+                    language = 'css';
+                  } else if (code.includes('#include') || code.includes('int main')) {
+                    language = 'c';
+                  } else if (code.includes('import') && code.includes('from') && code.includes('class')) {
+                    language = 'java';
+                  } else {
+                    language = 'plaintext';
+                  }
                 }
+
+                // 特殊处理 Markdown 示例代码块
+                if (code.includes('#') && code.includes('*') && code.includes('-') &&
+                  code.includes('[') && code.includes(']') && code.includes('(') &&
+                  code.includes(')') && language === 'markdown') {
+                  language = 'markdown';
+                }
+              } else {
+                // 回退处理：尽管不太可能发生，但处理 code 是字符串的情况
+                code = String(codeObj);
+                language = languageStr || 'plaintext';
               }
 
-              // 特殊处理 Markdown 示例代码块
-              if (code.includes('#') && code.includes('*') && code.includes('-') &&
-                code.includes('[') && code.includes(']') && code.includes('(') &&
-                code.includes(')') && language === 'markdown') {
-                language = 'markdown';
-              }
-            } else {
-              // 回退处理：尽管不太可能发生，但处理 code 是字符串的情况
-              code = String(codeObj);
-              language = languageStr || 'plaintext';
-            }
+              // 处理可能的 HTML 实体编码
+              const escapedCode = code
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
 
-            // 处理可能的 HTML 实体编码
-            const escapedCode = code
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/"/g, '&quot;')
-              .replace(/'/g, '&#39;');
+              const codeBlockId = `code-block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-            const codeBlockId = `code-block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-            return `<div class="md-code-block" id="${codeBlockId}" data-language="${language}" data-code="${encodeURIComponent(code)}">
+              return `<div class="md-code-block" id="${codeBlockId}" data-language="${language}" data-code="${encodeURIComponent(code)}">
                       <div class="md-code-header">
                         <span class="language">${language}</span>
                         <button class="copy-btn">Copy</button>
@@ -216,16 +280,20 @@ const ChatBox: React.FC = () => {
                         <pre class="language-${language}">${escapedCode}</pre>
                       </div>
                     </div>`;
+            }
           }
-        }
-      });
+        });
+        markdownToHtml.markedInstance = marked;
+      }
 
-      return await marked.parse(content);
+      return await markdownToHtml.markedInstance.parse(content);
     } catch (error) {
       console.error('Markdown 解析失败:', error);
       return content; // 解析失败时返回原始内容
     }
   }
+  // 添加静态属性来存储 Marked 实例
+  markdownToHtml.markedInstance = null as Marked | null;
 
   // 判断内容是否为纯代码块
   const isOnlyCodeBlock = (content: string): boolean => {
@@ -418,8 +486,7 @@ const ChatBox: React.FC = () => {
               // 纯代码块
               lastMessage.type = 'code';
             } else if (lastMessage.content.includes("```") || containsMarkdown(lastMessage.content)) {
-              // 包含代码块的 Markdown 或纯 Markdown
-              lastMessage.type = 'markdown';
+              // 消息已经结束，确保最终的渲染是完整的
               markdownToHtml(lastMessage.content).then(html => {
                 setMessages(messages => {
                   const updatedMessages = [...messages];
@@ -437,12 +504,28 @@ const ChatBox: React.FC = () => {
             }
           }
 
+          // 清除正在处理的消息索引
+          processingMsgIndexRef.current = null;
+
           return newMessages;
         }
 
         if (!lastMessage.isUser) {
           // 累积内容
           lastMessage.content += content;
+
+          // 获取消息在数组中的索引
+          const msgIndex = newMessages.length - 1;
+
+          // 检查是否应该作为 Markdown 处理
+          if (shouldProcessAsMarkdown(lastMessage.content)) {
+            // 先设置类型为 markdown，这样即使还在处理中也能显示为 markdown 视图
+            lastMessage.type = 'markdown';
+
+            // 记录正在处理的消息索引，并进行节流处理
+            processingMsgIndexRef.current = msgIndex;
+            throttledMarkdownProcess(lastMessage.content, msgIndex);
+          }
         }
 
         return newMessages;
@@ -536,10 +619,10 @@ const ChatBox: React.FC = () => {
 
         <View className="message-content">
           {msg.type === "text" && <Text userSelect>{msg.content}</Text>}
-          {msg.type === "markdown" && msg.markedHtml && (
+          {msg.type === "markdown" && (
             <View
               className="markdown-content"
-              dangerouslySetInnerHTML={{ __html: msg.markedHtml }}
+              dangerouslySetInnerHTML={{ __html: msg.markedHtml || `<p>${msg.content}</p>` }}
             />
           )}
           {msg.type === "code" && renderCodeBlock(msg.content)}

@@ -379,3 +379,169 @@
     margin-left: 8px;
   }
 }
+
+
+.markdown-content {
+  width: 100%;
+  font-size: 0.5rem;
+  line-height: 0.5rem;
+
+  h1, h2, h3, h4, h5, h6 {
+    margin: 8px 0;
+    font-weight: bold;
+  }
+
+  h1 { font-size: 1rem; }
+  h2 { font-size: 0.9rem; }
+  h3 { font-size: 0.8rem; }
+
+  p {
+    margin: 8px 0;
+  }
+
+  ul, ol {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+
+  a {
+    color: #2196f3;
+    text-decoration: underline;
+  }
+
+  pre {
+    background: #f5f5f5;
+    padding: 8px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  blockquote {
+    border-left: 4px solid #ddd;
+    padding-left: 10px;
+    margin-left: 0;
+    color: #666;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+  }
+
+  th, td {
+    border: 1px solid #ddd;
+    padding: 6px;
+  }
+
+  th {
+    background-color: #f5f5f5;
+  }
+
+
+  .md-code-block {
+    width: 90%;
+    margin: 8px auto;
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    
+    .md-code-header {
+      width: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      background: #3535359e;
+      border-bottom: 1px solid #3d3d3d;
+      
+      .language {
+        color: #9cdcfe;
+        margin-right: 15px;
+        width: auto;
+        font-size: 0.5rem;
+        font-family: 'Consolas', monospace;
+      }
+      
+      .copy-btn {
+        font-size: 0.4rem;
+        padding: 0;
+        width: auto;
+        margin-right: 10px;
+        min-width: 60px;
+        background: #3d3d3d;
+        color: #fff;
+        border: none;
+        border-radius: 30%;
+        cursor: pointer;
+        
+        &:hover { background: #4d4d4d; }
+        &:active { background: #5d5d5d; }
+      }
+    }
+    
+    .code-content {
+      padding: 5%;
+      width: 90%;
+      background-color: black;
+      overflow-x: hidden;
+      
+      pre {
+        display: block;
+        width: 100%;
+        color: #d4d4d4;
+        font-family: 'Consolas', monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        white-space: pre;
+        tab-size: 4;
+        overflow: auto;
+        background: transparent;
+        margin: 0;
+        padding: 0;
+      }
+    }
+  }
+  
+  pre.language-markdown {
+    // markdown 语法高亮样式
+    .hljs-section {
+      color: #569CD6; // 标题颜色
+    }
+    .hljs-strong {
+      color: #CE9178; // 粗体颜色
+      font-weight: bold;
+    }
+    .hljs-emphasis {
+      color: #CE9178; // 斜体颜色
+      font-style: italic;
+    }
+    .hljs-bullet {
+      color: #D7BA7D; // 列表项颜色
+    }
+    .hljs-quote {
+      color: #608B4E; // 引用颜色
+    }
+    .hljs-link {
+      color: #569CD6; // 链接颜色
+    }
+    .hljs-code {
+      color: #171818; // 内联代码颜色
+    }
+  }
+  
+  /* 对于内联代码样式进行调整 */
+  :not(pre) > code {
+    font-family: 'Consolas', monospace;
+    padding: 2px 4px;
+    border-radius: 3px;
+    color: #1a0a0a;
+  }
+}
