@@ -9,6 +9,8 @@ import "./ChatBox.scss";
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 
+import { Marked } from "marked";
+
 
 
 interface Message {
@@ -19,6 +21,7 @@ interface Message {
   fileId?: string;
   workflowResult?: string;
   end?: boolean;
+  markedHtml?: string;
 }
 
 
@@ -50,6 +53,36 @@ const ChatBox: React.FC = () => {
     });
   }, [messages]);
 
+
+  const markdownToHtml = async (content: string) => {
+    console.log("开始解析Markdown");
+    try {
+      const marked = new Marked({
+        breaks: true,        // 启用换行符
+        gfm: true,           // 启用 GitHub 风格的 Markdown
+        pedantic: false,     // 尽量不要容错
+        headerIds: true,     // 为标题添加 id
+        mangle: false,       // 不转义内联 HTML
+        silent: false        // 显示错误
+      });
+      
+      // 可以添加代码高亮的渲染器扩展
+      // 如果需要
+      
+      return await marked.parse(content);
+    } catch (error) {
+      console.error('Markdown 解析失败:', error);
+      return content; // 解析失败时返回原始内容
+    }
+  }
+
+  // 判断内容是否为纯代码块
+const isOnlyCodeBlock = (content: string): boolean => {
+  const trimmed = content.trim();
+  return trimmed.startsWith("```") && 
+    trimmed.endsWith("```") && 
+    trimmed.split("```").length === 3;
+}
 
   // 文件上传函数
   const handleFileRead = async () => {
@@ -206,8 +239,29 @@ const ChatBox: React.FC = () => {
         if (lastMessage.end) return newMessages;
         if (end) {
           lastMessage.end = end;
-          return newMessages;
-        }
+  
+          // 判断是纯代码块还是包含 Markdown
+          if (!lastMessage.isUser) {
+            if (isOnlyCodeBlock(lastMessage.content)) {
+            lastMessage.type = 'code';
+        } else {
+          lastMessage.type = 'markdown';
+          markdownToHtml(lastMessage.content).then(html => {
+              setMessages(messages => {
+              const updatedMessages = [...messages];
+              const msgToUpdate = updatedMessages.find(m => m === lastMessage);
+              if (msgToUpdate) {
+                msgToUpdate.markedHtml = html;
+                msgToUpdate.type = 'markdown';
+              }
+              return updatedMessages;
+            });
+      });
+    }
+  }
+
+  return newMessages;
+}
         if (!lastMessage.isUser) {
           // 累积内容
           const newContent = lastMessage.content + content;
@@ -309,6 +363,12 @@ const ChatBox: React.FC = () => {
 
         <View className="message-content">
           {msg.type === "text" && <Text userSelect>{msg.content}</Text>}
+          {msg.type === "markdown" && msg.markedHtml && (
+          <View 
+            className="markdown-content" 
+            dangerouslySetInnerHTML={{ __html: msg.markedHtml }}
+          />
+        )}
           {msg.type === "code" && renderCodeBlock(msg.content)}
           {msg.type === "file" && renderFileMessage(msg)}
         </View>
