@@ -173,7 +173,7 @@ class ChatSession {
   }
 }
 // token配置
-const token = 'pat_iiMmI2VszBGqUO5FzRdLX7WYOFjOOmZdY9MtdZDT5htaiNzAt60wvkPF5QnnuMTr';
+export const token = 'pat_iiMmI2VszBGqUO5FzRdLX7WYOFjOOmZdY9MtdZDT5htaiNzAt60wvkPF5QnnuMTr';
 // 使用个人访问令牌初始化客户端
 
 const client = async function* (request: any) {
@@ -281,17 +281,45 @@ export function clearChatHistory() {
 
 export async function tryUploadFile(formData: FormData) {
   let id: string = "";
-  await fetch('https://api.coze.cn/v1/files/upload',
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData
-    }
-  ).then(response => response.json()).then(result => {
-    id = result.data.id;
-  });
+  if (process.env.TARO_ENV === 'h5') {
+    await fetch('https://api.coze.cn/v1/files/upload',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData
+      }
+    ).then(response => response.json()).then(result => {
+      id = result.data.id;
+    });
+  } else if (process.env.TARO_ENV === 'weapp') {
+    const file = formData;
+    console.log(file);
+    id = await new Promise((resolve) => {
+      //@ts-ignore
+      wx.uploadFile({
+        url: 'https://api.coze.cn/v1/files/upload', // 你的接口地址
+        //@ts-ignore
+        filePath: file.path, // 文件路径
+        name: 'file',
+        header: {
+          Authorization: `Bearer ${token}`
+        },
+        success: function (res) {
+          // 上传成功，处理服务器返回的响应信息
+          console.log('data0:\n', typeof res.data);
+          const data=JSON.parse(res.data).data;
+          const id = data.id;
+          resolve(id);
+        },
+        fail: function (res) {
+          // 上传失败，处理上传错误
+          console.error(res);
+        }
+      });
+    })
+  }
 
   chatSession.addFile(id);
   return id || null;

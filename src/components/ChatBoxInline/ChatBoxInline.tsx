@@ -3,6 +3,7 @@ import Taro from "@tarojs/taro";
 import { View, Button, Text, Input, ScrollView } from "@tarojs/components";
 import {
   StreamChatWithBox,
+  token,
   tryUploadFile,
 } from "../../services/connect_coze";
 import "./ChatBoxInline.scss";
@@ -314,79 +315,120 @@ const ChatBoxInline: React.FC = () => {
   // 文件上传函数
   const handleFileRead = async () => {
     try {
-      // 创建文件选择器
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '*/*';
-      input.style.display = 'none';
-      document.body.appendChild(input);
+      if (process.env.TARO_ENV === 'h5') {
+        // 创建文件选择器
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '*/*';
+        input.style.display = 'none';
+        document.body.appendChild(input);
 
-      input.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (!file) return;
+        input.onchange = async (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          
+          console.warn(file);
+          debugger
+          if (!file) return;
 
-        // 检查文件大小
-        if (file.size > 512 * 1024 * 1024) {
-          console.error('文件不能超过512MB');
-          return;
-        }
-
-        // 显示加载提示
-        const loadingEl = document.createElement('div');
-        loadingEl.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 4px;
-        z-index: 9999;
-      `;
-        loadingEl.textContent = '正在分析文件...';
-        document.body.appendChild(loadingEl);
-
-        try {
-          // 创建 FormData
-          const formData = new FormData();
-          formData.append('file', file);
-
-          // 创建新的消息用于显示分析结果
-          setMessages(prev => [...prev, {
-            type: 'file',
-            content: `上传文件：${file.name}`,
-            isUser: true,
-            fileName: file.name
-          }]);
-
-          setMessages(prev => [...prev, {
-            type: 'text',
-            content: '',
-            isUser: false
-          }]);
-
-          const id = await tryUploadFile(formData);
-          if (id) {
-            console.log('文件上传成功', id);
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMessage = newMessages[newMessages.length - 1];
-              lastMessage.end = true;
-              lastMessage.content = `文件上传成功，ID: ${id}`;
-              return newMessages;
-            });
+          // 检查文件大小
+          if (file.size > 512 * 1024 * 1024) {
+            console.error('文件不能超过512MB');
+            return;
           }
-          else console.error('文件上传失败');
-        } catch (error) {
-          console.error('工作流执行失败:', error);
-        } finally {
-          loadingEl.remove();
-        }
-      };
 
-      input.click();
-      document.body.removeChild(input);
+          // 显示加载提示
+          const loadingEl = document.createElement('div');
+          loadingEl.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            z-index: 9999;
+          `;
+          loadingEl.textContent = '正在分析文件...';
+          document.body.appendChild(loadingEl);
+
+          try {
+            // 创建 FormData
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // 创建新的消息用于显示分析结果
+            setMessages(prev => [...prev, {
+              type: 'file',
+              content: `上传文件：${file.name}`,
+              isUser: true,
+              fileName: file.name
+            }]);
+
+            setMessages(prev => [...prev, {
+              type: 'text',
+              content: '',
+              isUser: false
+            }]);
+
+            const id = await tryUploadFile(formData);
+            if (id) {
+              console.log('文件上传成功', id);
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                lastMessage.end = true;
+                lastMessage.content = `文件上传成功，ID: ${id}`;
+                return newMessages;
+              });
+            }
+            else console.error('文件上传失败');
+          } catch (error) {
+            console.error('工作流执行失败:', error);
+          } finally {
+            loadingEl.remove();
+          }
+        };
+
+        input.click();
+        document.body.removeChild(input);
+      } else if (process.env.TARO_ENV === 'weapp') {
+        //@ts-ignore
+        wx.chooseMessageFile({
+          count: 1, 
+          success: async function (res) {
+            // 获取选择的文件信息
+            var file = res.tempFiles[0];
+            
+            // 创建新的消息用于显示分析结果
+            setMessages(prev => [...prev, {
+              type: 'file',
+              content: `上传文件：${file.name}`,
+              isUser: true,
+              fileName: file.name
+            }]);
+
+            setMessages(prev => [...prev, {
+              type: 'text',
+              content: '',
+              isUser: false
+            }]);
+            // 上传文件
+            const id = await tryUploadFile(file);
+            if (id) {
+              console.log('文件上传成功', id);
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                lastMessage.end = true;
+                lastMessage.content = `文件上传成功，ID: ${id}`;
+                return newMessages;
+              });
+            }
+          }
+        })
+      }
+
     } catch (error) {
       console.error('文件处理失败:', error);
     }
@@ -398,7 +440,6 @@ const ChatBoxInline: React.FC = () => {
       <View className="file-message">
         <View className="file-icon">📎</View>
         <Text className="file-name">{msg.fileName}</Text>
-        <Text className="file-id">ID: {msg.fileId}</Text>
 
       </View>
     );
